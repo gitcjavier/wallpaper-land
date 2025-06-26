@@ -1,0 +1,177 @@
+---
+---
+
+<header class="bg-white/80 backdrop-blur-md shadow-sm sticky top-0 z-50 border-b border-white/20">
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <div class="flex justify-between items-center py-4">
+      <!-- Logo -->
+      <div class="flex items-center">
+        <a href="/" class="flex items-center space-x-2">
+          <div class="w-8 h-8 bg-gradient-to-r from-primary-500 to-secondary-500 rounded-lg flex items-center justify-center">
+            <svg class="w-5 h-5 text-white" fill="currentColor" viewBox="0 0 24 24">
+              <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
+            </svg>
+          </div>
+          <span class="text-xl font-bold text-gray-900">WallpaperHub</span>
+        </a>
+      </div>
+      
+      <!-- Floating Search Bar (initially hidden) -->
+      <div id="floating-search" class="absolute left-1/2 transform -translate-x-1/2 opacity-0 pointer-events-none transition-all duration-500 ease-out">
+        <div class="relative">
+          <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+            <svg class="h-4 w-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+            </svg>
+          </div>
+          <input 
+            type="text" 
+            class="block w-80 pl-10 pr-4 py-2 border border-gray-300 rounded-lg leading-5 bg-white/90 backdrop-blur-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all duration-200 text-sm"
+            placeholder="Buscar wallpapers..."
+            id="floating-search-input"
+          />
+        </div>
+      </div>
+      
+      <!-- Navigation -->
+      <nav class="hidden md:flex items-center space-x-8">
+        <a href="/" class="text-gray-700 hover:text-primary-600 font-medium transition-colors duration-200">
+          Inicio
+        </a>
+        <a href="/admin" class="text-gray-700 hover:text-primary-600 font-medium transition-colors duration-200">
+          Admin
+        </a>
+      </nav>
+      
+      <!-- Mobile menu button -->
+      <button class="md:hidden p-2 rounded-lg hover:bg-gray-100/50 transition-colors duration-200" id="mobile-menu-btn">
+        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/>
+        </svg>
+      </button>
+    </div>
+    
+    <!-- Mobile menu -->
+    <div class="md:hidden hidden" id="mobile-menu">
+      <div class="py-4 space-y-2 border-t border-gray-200/50">
+        <a href="/" class="block py-2 text-gray-700 hover:text-primary-600 font-medium transition-colors duration-200">
+          Inicio
+        </a>
+        <a href="/admin" class="block py-2 text-gray-700 hover:text-primary-600 font-medium transition-colors duration-200">
+          Admin
+        </a>
+      </div>
+    </div>
+  </div>
+</header>
+
+<script>
+  const mobileMenuBtn = document.getElementById('mobile-menu-btn');
+  const mobileMenu = document.getElementById('mobile-menu');
+  
+  mobileMenuBtn?.addEventListener('click', () => {
+    mobileMenu?.classList.toggle('hidden');
+  });
+
+  // Floating search functionality
+  const floatingSearch = document.getElementById('floating-search');
+  const floatingSearchInput = document.getElementById('floating-search-input');
+  const heroSection = document.querySelector('.hero-section');
+  const originalSearchInput = document.getElementById('search-input');
+  
+  let searchTimeout: NodeJS.Timeout;
+  let isFloatingVisible = false;
+
+  // Intersection Observer to detect when hero section is out of view
+  if (heroSection && floatingSearch && floatingSearchInput && originalSearchInput) {
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach((entry) => {
+        if (entry.isIntersecting) {
+          // Hero section is visible, hide floating search
+          if (isFloatingVisible) {
+            floatingSearch.style.opacity = '0';
+            floatingSearch.style.transform = 'translate(-50%, -10px)';
+            floatingSearch.style.pointerEvents = 'none';
+            isFloatingVisible = false;
+          }
+        } else {
+          // Hero section is not visible, show floating search
+          if (!isFloatingVisible) {
+            floatingSearch.style.opacity = '1';
+            floatingSearch.style.transform = 'translate(-50%, 0)';
+            floatingSearch.style.pointerEvents = 'auto';
+            isFloatingVisible = true;
+            
+            // Sync the search value
+            floatingSearchInput.value = originalSearchInput.value;
+          }
+        }
+      });
+    }, {
+      threshold: 0.1,
+      rootMargin: '-100px 0px 0px 0px'
+    });
+
+    observer.observe(heroSection);
+
+    // Handle search input in floating search
+    floatingSearchInput.addEventListener('input', (e) => {
+      clearTimeout(searchTimeout);
+      
+      searchTimeout = setTimeout(() => {
+        const query = (e.target as HTMLInputElement).value.trim();
+        const url = new URL(window.location.href);
+        
+        if (query) {
+          url.searchParams.set('search', query);
+        } else {
+          url.searchParams.delete('search');
+        }
+        
+        window.location.href = url.toString();
+      }, 500);
+    });
+
+    // Sync original search input changes to floating search
+    originalSearchInput.addEventListener('input', (e) => {
+      floatingSearchInput.value = (e.target as HTMLInputElement).value;
+    });
+  }
+</script>
+
+<style>
+  /* Ensure backdrop-blur works across browsers */
+  header {
+    -webkit-backdrop-filter: blur(5px);
+    backdrop-filter: blur(5px);
+  }
+  
+  /* Smooth transitions for all interactive elements */
+  header a, header button {
+    transition: all 0.2s ease-in-out;
+  }
+  
+  /* Enhanced mobile menu styling */
+  #mobile-menu {
+    background: rgba(255, 255, 255, 0.95);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+  }
+
+  /* Floating search specific styles */
+  #floating-search {
+    transition: opacity 0.5s ease-out, transform 0.5s ease-out;
+  }
+
+  #floating-search input {
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  }
+
+  /* Hide floating search on mobile */
+  @media (max-width: 768px) {
+    #floating-search {
+      display: none;
+    }
+  }
+</style>
+</header>

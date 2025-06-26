@@ -1,0 +1,320 @@
+---
+import Layout from '../layouts/Layout.astro';
+import Header from '../components/Header.astro';
+import SearchBar from '../components/SearchBar.astro';
+import CategoryFilter from '../components/CategoryFilter.astro';
+import WallpaperGrid from '../components/WallpaperGrid.astro';
+import WallpaperModal from '../components/WallpaperModal';
+import { supabase } from '../lib/supabase';
+
+// Get query parameters
+const categorySlug = Astro.url.searchParams.get('category');
+const searchQuery = Astro.url.searchParams.get('search');
+
+// Fetch categories
+const { data: categories = [] } = await supabase
+  .from('categories')
+  .select('*')
+  .order('name');
+
+// Build wallpapers query
+let wallpapersQuery = supabase
+  .from('wallpapers')
+  .select(`
+    id,
+    title,
+    description,
+    image_url,
+    thumbnail_url,
+    download_count,
+    width,
+    height,
+    file_size,
+    tags,
+    created_at,
+    categories:category_id (
+      name,
+      color
+    )
+  `)
+  .order('created_at', { ascending: false });
+
+// Apply category filter
+if (categorySlug) {
+  const category = categories.find(c => c.slug === categorySlug);
+  if (category) {
+    wallpapersQuery = wallpapersQuery.eq('category_id', category.id);
+  }
+}
+
+// Apply search filter
+if (searchQuery) {
+  wallpapersQuery = wallpapersQuery.ilike('title', `%${searchQuery}%`);
+}
+
+const { data: wallpapers = [] } = await wallpapersQuery;
+
+// Transform data for component
+const transformedWallpapers = wallpapers.map(w => ({
+  ...w,
+  category: w.categories ? {
+    name: w.categories.name,
+    color: w.categories.color
+  } : null
+}));
+
+const totalWallpapers = wallpapers.length;
+const selectedCategoryName = categorySlug ? categories.find(c => c.slug === categorySlug)?.name : null;
+---
+
+<Layout title={selectedCategoryName ? `${selectedCategoryName} - WallpaperHub` : "WallpaperHub - Descarga wallpapers gratis"}>
+  <Header />
+  
+  <!-- Hero Section -->
+  <section class="hero-section bg-gradient-to-br from-primary-50 via-white to-secondary-50 py-16 relative overflow-hidden">
+    <!-- Animated background elements -->
+    <div class="absolute inset-0 opacity-5">
+      <div class="absolute top-10 left-10 w-20 h-20 bg-primary-500 rounded-full animate-pulse"></div>
+      <div class="absolute top-32 right-20 w-16 h-16 bg-secondary-500 rounded-full animate-pulse" style="animation-delay: 1s"></div>
+      <div class="absolute bottom-20 left-1/4 w-12 h-12 bg-accent-500 rounded-full animate-pulse" style="animation-delay: 2s"></div>
+    </div>
+    
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center relative z-10">
+      <h1 class="text-4xl md:text-6xl font-bold text-gray-900 mb-6 animate-slide-up">
+        {selectedCategoryName ? (
+          <>Wallpapers de <span class="bg-gradient-to-r from-primary-600 to-secondary-600 bg-clip-text text-transparent">{selectedCategoryName}</span></>
+        ) : (
+          <>Descarga <span class="bg-gradient-to-r from-primary-600 to-secondary-600 bg-clip-text text-transparent">wallpapers</span> increíbles</>
+        )}
+      </h1>
+      <p class="text-xl text-gray-600 mb-8 max-w-2xl mx-auto animate-slide-up" style="animation-delay: 0.1s">
+        {selectedCategoryName ? (
+          `Explora ${totalWallpapers} wallpapers de ${selectedCategoryName.toLowerCase()} de alta calidad, completamente gratis.`
+        ) : (
+          `Explora nuestra colección de wallpapers de alta calidad, organizados por categorías y completamente gratis.`
+        )}
+      </p>
+      
+      <div class="animate-slide-up" style="animation-delay: 0.2s">
+        <SearchBar searchQuery={searchQuery} />
+      </div>
+    </div>
+  </section>
+
+  <!-- Main Content -->
+  <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+    <!-- Filters -->
+    <div class="animate-slide-up" style="animation-delay: 0.3s">
+      <CategoryFilter categories={categories} selectedCategory={categorySlug} />
+    </div>
+    
+    <!-- Results Info -->
+    {(searchQuery || selectedCategoryName) && (
+      <div class="mb-6 animate-slide-up" style="animation-delay: 0.4s">
+        <div class="bg-white rounded-lg p-4 shadow-sm border border-gray-100">
+          <div class="flex items-center justify-between">
+            <div>
+              {searchQuery && (
+                <p class="text-gray-600">
+                  Resultados para "<span class="font-semibold text-primary-600">{searchQuery}</span>"
+                  {selectedCategoryName && ` en ${selectedCategoryName}`}: 
+                  <span class="font-semibold">{transformedWallpapers.length}</span> wallpapers encontrados
+                </p>
+              )}
+              {!searchQuery && selectedCategoryName && (
+                <p class="text-gray-600">
+                  Mostrando <span class="font-semibold">{transformedWallpapers.length}</span> wallpapers de 
+                  <span class="font-semibold text-primary-600">{selectedCategoryName}</span>
+                </p>
+              )}
+            </div>
+            {(searchQuery || selectedCategoryName) && (
+              <a 
+                href="/" 
+                class="inline-flex items-center px-3 py-1 text-sm text-primary-600 hover:text-primary-700 hover:bg-primary-50 rounded-lg transition-colors"
+              >
+                <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                </svg>
+                Limpiar filtros
+              </a>
+            )}
+          </div>
+        </div>
+      </div>
+    )}
+    
+    <!-- Wallpapers Grid -->
+    <div class="animate-slide-up" style="animation-delay: 0.5s">
+      <WallpaperGrid wallpapers={transformedWallpapers} />
+    </div>
+  </main>
+
+  <!-- Wallpaper Modal -->
+  <WallpaperModal client:load />
+
+  <!-- Footer -->
+  <footer class="bg-gray-900 text-white py-12 mt-16">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="grid md:grid-cols-4 gap-8">
+        <div>
+          <div class="flex items-center space-x-2 mb-4">
+            <div class="w-8 h-8 bg-gradient-to-r from-primary-500 to-secondary-500 rounded-lg flex items-center justify-center">
+              <svg class="w-5 h-5 text-white" fill="currentColor" viewBox="0 0 24 24">
+                <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
+              </svg>
+            </div>
+            <span class="text-xl font-bold">WallpaperHub</span>
+          </div>
+          <p class="text-gray-300">
+            La mejor colección de wallpapers gratuitos para personalizar tus dispositivos.
+          </p>
+        </div>
+        
+        <div>
+          <h3 class="text-lg font-semibold mb-4">Categorías Populares</h3>
+          <ul class="space-y-2 text-gray-300">
+            {categories.slice(0, 6).map(category => (
+              <li>
+                <a href={`/?category=${category.slug}`} class="hover:text-primary-400 transition-colors flex items-center">
+                  <div 
+                    class="w-3 h-3 rounded-full mr-2" 
+                    style={`background-color: ${category.color}`}
+                  ></div>
+                  {category.name}
+                </a>
+              </li>
+            ))}
+          </ul>
+        </div>
+        
+        <div>
+          <h3 class="text-lg font-semibold mb-4">Entretenimiento</h3>
+          <ul class="space-y-2 text-gray-300">
+            {categories.filter(c => ['anime', 'peliculas', 'series-tv', 'deportes'].includes(c.slug)).map(category => (
+              <li>
+                <a href={`/?category=${category.slug}`} class="hover:text-primary-400 transition-colors flex items-center">
+                  <div 
+                    class="w-3 h-3 rounded-full mr-2" 
+                    style={`background-color: ${category.color}`}
+                  ></div>
+                  {category.name}
+                </a>
+              </li>
+            ))}
+          </ul>
+        </div>
+        
+        <div>
+          <h3 class="text-lg font-semibold mb-4">Estadísticas</h3>
+          <ul class="space-y-2 text-gray-300">
+            <li class="flex items-center">
+              <svg class="w-4 h-4 mr-2 text-primary-400" fill="currentColor" viewBox="0 0 24 24">
+                <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
+              </svg>
+              {categories.length} categorías
+            </li>
+            <li class="flex items-center">
+              <svg class="w-4 h-4 mr-2 text-green-400" fill="currentColor" viewBox="0 0 24 24">
+                <path d="M5 13l4 4L19 7"/>
+              </svg>
+              Descarga gratuita
+            </li>
+            <li class="flex items-center">
+              <svg class="w-4 h-4 mr-2 text-blue-400" fill="currentColor" viewBox="0 0 24 24">
+                <path d="M13 10V3L4 14h7v7l9-11h-7z"/>
+              </svg>
+              Alta resolución
+            </li>
+            <li class="flex items-center">
+              <svg class="w-4 h-4 mr-2 text-purple-400" fill="currentColor" viewBox="0 0 24 24">
+                <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
+              </svg>
+              Actualizado diariamente
+            </li>
+          </ul>
+        </div>
+      </div>
+      
+      <div class="border-t border-gray-800 mt-8 pt-8 text-center text-gray-300">
+        <p>&copy; 2025 WallpaperHub. Todos los derechos reservados.</p>
+      </div>
+    </div>
+  </footer>
+
+  <!-- Modal Script -->
+  <script>
+    // Global modal state
+    let modalComponent = null;
+    let currentWallpaper = null;
+    let isModalOpen = false;
+
+    // Function to open modal
+    window.openWallpaperModal = (wallpaperId) => {
+      if (!window.wallpaperData || !window.wallpaperData.has(wallpaperId)) {
+        console.error('Wallpaper data not found for ID:', wallpaperId);
+        return;
+      }
+
+      currentWallpaper = window.wallpaperData.get(wallpaperId);
+      isModalOpen = true;
+      
+      // Trigger modal update
+      if (modalComponent) {
+        modalComponent.forceUpdate();
+      }
+    };
+
+    // Function to close modal
+    window.closeWallpaperModal = () => {
+      isModalOpen = false;
+      currentWallpaper = null;
+      
+      // Trigger modal update
+      if (modalComponent) {
+        modalComponent.forceUpdate();
+      }
+    };
+
+    // Store modal component reference
+    window.setModalComponent = (component) => {
+      modalComponent = component;
+    };
+
+    // Get current modal state
+    window.getModalState = () => ({
+      wallpaper: currentWallpaper,
+      isOpen: isModalOpen
+    });
+  </script>
+</Layout>
+
+<style>
+  /* Enhanced animations */
+  @keyframes slideUp {
+    from {
+      opacity: 0;
+      transform: translateY(30px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  .animate-slide-up {
+    animation: slideUp 0.8s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+    opacity: 0;
+  }
+
+  /* Smooth page transitions */
+  body {
+    transition: opacity 0.3s ease-in-out;
+  }
+
+  /* Loading state styles */
+  .page-loading {
+    opacity: 0.7;
+    pointer-events: none;
+  }
+</style>

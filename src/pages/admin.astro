@@ -1,0 +1,114 @@
+---
+import Layout from '../layouts/Layout.astro';
+import Header from '../components/Header.astro';
+import UploadForm from '../components/UploadForm';
+import { supabase } from '../lib/supabase';
+
+// Fetch categories for the upload form
+const { data: categories = [] } = await supabase
+  .from('categories')
+  .select('*')
+  .order('name');
+
+// Fetch recent wallpapers for admin overview
+const { data: recentWallpapers = [] } = await supabase
+  .from('wallpapers')
+  .select(`
+    id,
+    title,
+    thumbnail_url,
+    download_count,
+    created_at,
+    categories:category_id (name, color)
+  `)
+  .order('created_at', { ascending: false })
+  .limit(10);
+
+const transformedWallpapers = recentWallpapers.map(w => ({
+  ...w,
+  category: w.categories ? {
+    name: w.categories.name,
+    color: w.categories.color
+  } : null
+}));
+---
+
+<Layout title="Admin Panel - WallpaperHub">
+  <Header />
+  
+  <div class="min-h-screen bg-gray-50 py-8">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="mb-8">
+        <h1 class="text-3xl font-bold text-gray-900">Panel de Administración</h1>
+        <p class="text-gray-600 mt-2">Gestiona el contenido de wallpapers</p>
+      </div>
+      
+      <div class="grid lg:grid-cols-2 gap-8">
+        <!-- Upload Form -->
+        <div>
+          <UploadForm categories={categories} client:load />
+        </div>
+        
+        <!-- Recent Wallpapers -->
+        <div class="bg-white rounded-xl shadow-lg p-6">
+          <h2 class="text-2xl font-bold text-gray-900 mb-6">Wallpapers Recientes</h2>
+          
+          {transformedWallpapers.length === 0 ? (
+            <div class="text-center py-8">
+              <div class="text-gray-400 mb-2">
+                <svg class="w-16 h-16 mx-auto" fill="currentColor" viewBox="0 0 24 24">
+                  <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
+                </svg>
+              </div>
+              <p class="text-gray-500">No hay wallpapers subidos aún</p>
+              <p class="text-sm text-gray-400 mt-1">Sube tu primer wallpaper para comenzar</p>
+            </div>
+          ) : (
+            <div class="space-y-4">
+              {transformedWallpapers.map(wallpaper => (
+                <div class="flex items-center space-x-4 p-3 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">
+                  <img 
+                    src={wallpaper.thumbnail_url} 
+                    alt={wallpaper.title}
+                    class="w-16 h-16 object-cover rounded-lg"
+                  />
+                  <div class="flex-1 min-w-0">
+                    <h3 class="font-medium text-gray-900 truncate">{wallpaper.title}</h3>
+                    <div class="flex items-center space-x-2 mt-1">
+                      {wallpaper.category && (
+                        <span 
+                          class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium text-white"
+                          style={`background-color: ${wallpaper.category.color}`}
+                        >
+                          {wallpaper.category.name}
+                        </span>
+                      )}
+                      <span class="text-sm text-gray-500">
+                        {wallpaper.download_count} descargas
+                      </span>
+                    </div>
+                  </div>
+                  <div class="text-sm text-gray-400">
+                    {new Date(wallpaper.created_at).toLocaleDateString('es-ES')}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+          
+          <div class="mt-6 text-center">
+            <a 
+              href="/" 
+              class="inline-flex items-center px-4 py-2 border border-primary-600 text-primary-600 rounded-lg hover:bg-primary-50 transition-colors"
+            >
+              Ver todos los wallpapers
+              <svg class="ml-2 w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+              </svg>
+            </a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</Layout>
