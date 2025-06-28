@@ -18,9 +18,17 @@
 
 
 
-| **Página Principal** | **Detalle de Wallpaper** | **Panel de Admin** |  
-|----------------------|--------------------------|--------------------|  
-| ![landing](https://github.com/user-attachments/assets/0236f50c-4b6e-4ffa-8e0a-83f945cfe39a) | ![descarga2](https://github.com/user-attachments/assets/78fd181a-147e-4782-a4fa-a1529ee8883b) | ![adminwall](https://github.com/user-attachments/assets/494df1a5-d308-455a-bf57-7042f34ca1f9) |  
+| **Página Principal** |
+|----------------------|
+| ![landing](https://github.com/user-attachments/assets/0236f50c-4b6e-4ffa-8e0a-83f945cfe39a) | 
+
+| **Detalle de Wallpaper** |
+|--------------------------|
+| ![descarga2](https://github.com/user-attachments/assets/78fd181a-147e-4782-a4fa-a1529ee8883b) |
+
+| **Panel de Admin** |
+|--------------------------|
+| ![adminwall](https://github.com/user-attachments/assets/494df1a5-d308-455a-bf57-7042f34ca1f9) |
 
 ---
 
