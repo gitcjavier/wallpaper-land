@@ -1,48 +1,42 @@
-# Astro Starter Kit: Basics
+# 🖼️ Wallify - Descarga Wallpapers HD Gratis 
 
-```sh
-npm create astro@latest -- --template basics
-```
+![Preview](https://via.placeholder.com/800x400/2d3748/ffffff?text=Wallify+Preview)  
+*Explora, descarga y comparte wallpapers en alta resolución para cualquier dispositivo.*
 
-[![Open in StackBlitz](https://developer.stackblitz.com/img/open_in_stackblitz.svg)](https://stackblitz.com/github/withastro/astro/tree/latest/examples/basics)
-[![Open with CodeSandbox](https://assets.codesandbox.io/github/button-edit-lime.svg)](https://codesandbox.io/p/sandbox/github/withastro/astro/tree/latest/examples/basics)
-[![Open in GitHub Codespaces](https://github.com/codespaces/badge.svg)](https://codespaces.new/withastro/astro?devcontainer_path=.devcontainer/basics/devcontainer.json)
+## 🌟 Características
+- ✅ Wallpapers en **4K/HD** para móviles, tablets y PC.  
+- 🔍 Búsqueda inteligente y filtros por categoría/tamaño.  
+- 🚀 Descargas **sin marca de agua** y gratuitas.  
+- 📊 Panel de administración integrado.  
 
-> 🧑‍🚀 **Seasoned astronaut?** Delete this file. Have fun!
+---
 
-![just-the-basics](https://github.com/withastro/astro/assets/2244813/a0a5533c-a856-4198-8470-2d67b1d7c554)
+## 🖥️ Capturas del Proyecto
 
-## 🚀 Project Structure
+| **Página Principal** | **Detalle de Wallpaper** | **Panel de Admin** |  
+|----------------------|--------------------------|--------------------|  
+| ![Home](image.png) | ![Detail](image.png) | ![Admin](image.png) |  
 
-Inside of your Astro project, you'll see the following folders and files:
+---
 
-```text
-/
-├── public/
-│   └── favicon.svg
-├── src/
-│   ├── layouts/
-│   │   └── Layout.astro
-│   └── pages/
-│       └── index.astro
-└── package.json
-```
+## 🛠️ Tecnologías Usadas  
+<div align="left">  
+  <img src="https://img.shields.io/badge/Astro-FF5D01?style=for-the-badge&logo=astro&logoColor=white" alt="Astro">  
+  <img src="https://img.shields.io/badge/TypeScript-3178C6?style=for-the-badge&logo=typescript&logoColor=white" alt="TypeScript">  
+  <img src="https://img.shields.io/badge/JavaScript-F7DF1E?style=for-the-badge&logo=javascript&logoColor=black" alt="JavaScript">  
+  <img src="https://img.shields.io/badge/Tailwind_CSS-38B2AC?style=for-the-badge&logo=tailwind-css&logoColor=white" alt="Tailwind">  
+  <img src="https://img.shields.io/badge/Supabase-3ECF8E?style=for-the-badge&logo=supabase&logoColor=white" alt="Supabase">  
+</div>  
 
-To learn more about the folder structure of an Astro project, refer to [our guide on project structure](https://docs.astro.build/en/basics/project-structure/).
+- **Frontend**: Astro + Tailwind (diseño responsive).  
+- **Backend**: Supabase (base de datos y autenticación).  
+- **Deploy**: Vercel/Netlify.  
 
-## 🧞 Commands
+---
 
-All commands are run from the root of the project, from a terminal:
-
-| Command                   | Action                                           |
-| :------------------------ | :----------------------------------------------- |
-| `npm install`             | Installs dependencies                            |
-| `npm run dev`             | Starts local dev server at `localhost:4321`      |
-| `npm run build`           | Build your production site to `./dist/`          |
-| `npm run preview`         | Preview your build locally, before deploying     |
-| `npm run astro ...`       | Run CLI commands like `astro add`, `astro check` |
-| `npm run astro -- --help` | Get help using the Astro CLI                     |
-
-## 👀 Want to learn more?
-
-Feel free to check [our documentation](https://docs.astro.build) or jump into our [Discord server](https://astro.build/chat).
+## 📦 Instalación Local  
+```bash
+git clone https://github.com/tu-usuario/wallify.git
+cd wallify
+npm install
+npm run dev
