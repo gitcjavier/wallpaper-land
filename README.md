@@ -1,6 +1,5 @@
-# 🖼️ Wallify - Descarga Wallpapers HD Gratis 
+# 🖼️ Wallpaper Land - Descarga Wallpapers HD Gratis 
 
-![Preview](https://via.placeholder.com/800x400/2d3748/ffffff?text=Wallify+Preview)  
 *Explora, descarga y comparte wallpapers en alta resolución para cualquier dispositivo.*
 
 ## 🌟 Características
@@ -35,14 +34,14 @@
 </div>  
 
 - **Frontend**: Astro + Tailwind (diseño responsive).  
-- **Backend**: Supabase (base de datos y autenticación).  
+- **Backend**: Supabase (base de datos ).  
 - **Deploy**: Vercel/Netlify.  
 
 ---
 
 ## 📦 Instalación Local  
 ```bash
-git clone https://github.com/tu-usuario/wallify.git
-cd wallify
+git clone https://github.com/gitcjavier/wallpaper-land.git
+cd wallpaper-land
 npm install
 npm run dev
