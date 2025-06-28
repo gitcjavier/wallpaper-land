@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 
 interface Category {
   id: string;
@@ -17,6 +17,7 @@ export default function UploadForm({ categories }: Props) {
   const [error, setError] = useState<string | null>(null);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [isClient, setIsClient] = useState(false);
   const [formData, setFormData] = useState({
     title: '',
     description: '',
@@ -25,7 +26,14 @@ export default function UploadForm({ categories }: Props) {
   });
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  // Ensure we're on the client side
+  useEffect(() => {
+    setIsClient(true);
+  }, []);
+
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!isClient) return;
+    
     const file = e.target.files?.[0];
     if (!file) {
       setSelectedFile(null);
@@ -59,6 +67,8 @@ export default function UploadForm({ categories }: Props) {
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
+    if (!isClient) return;
+    
     e.preventDefault();
     
     if (!selectedFile) {
@@ -113,6 +123,8 @@ export default function UploadForm({ categories }: Props) {
   };
 
   const handleChangeImage = () => {
+    if (!isClient) return;
+    
     setPreview(null);
     setSelectedFile(null);
     setError(null);
@@ -123,12 +135,17 @@ export default function UploadForm({ categories }: Props) {
   };
 
   const handleSuccessModalClose = () => {
+    if (!isClient) return;
+    
     setShowSuccessModal(false);
     // Reload page after a short delay to show the new wallpaper
     setTimeout(() => {
       window.location.reload();
     }, 300);
   };
+
+  // Don't render anything on the server
+  if (!isClient) return null;
 
   return (
     <>

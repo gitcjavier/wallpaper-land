@@ -16,6 +16,7 @@ interface Props {
     file_size?: number;
     tags?: string[];
     created_at?: string;
+    webp_url?: string;
   };
 }
 
@@ -24,13 +25,18 @@ const { wallpaper } = Astro.props;
 
 <div class="wallpaper-card group relative overflow-hidden rounded-xl bg-white shadow-md transition-all duration-300 hover:shadow-xl hover:-translate-y-1">
   <div class="relative aspect-[3/4] overflow-hidden bg-gray-100 cursor-pointer" data-wallpaper-id={wallpaper.id}>
-    <img 
-      src={wallpaper.thumbnail_url} 
-      alt={wallpaper.title}
-      class="h-full w-full object-contain transition-all duration-300 group-hover:scale-95 group-hover:translate-y-1"
-      loading="lazy"
-      style="object-position: center"
-    />
+    <picture>
+      {wallpaper.webp_url && (
+        <source srcset={wallpaper.webp_url} type="image/webp" />
+      )}
+      <img 
+        src={wallpaper.thumbnail_url} 
+        alt={wallpaper.title}
+        class="h-full w-full object-contain transition-all duration-300 group-hover:scale-95 group-hover:translate-y-1"
+        loading="lazy"
+        style="object-position: center"
+      />
+    </picture>
     
     <!-- Overlay on hover -->
     <div class="absolute inset-0 bg-black/50 opacity-0 transition-opacity duration-300 group-hover:opacity-100">
@@ -97,9 +103,9 @@ const { wallpaper } = Astro.props;
 
   // Handle view button clicks and image clicks
   document.addEventListener('click', (e) => {
-    const viewBtn = (e.target as Element)?.closest('.view-btn');
-    const imageContainer = (e.target as Element)?.closest('[data-wallpaper-id]');
-    const titleElement = (e.target as Element)?.closest('h3[data-wallpaper-id]');
+    const viewBtn = e.target?.closest && e.target.closest('.view-btn');
+    const imageContainer = e.target?.closest && e.target.closest('[data-wallpaper-id]');
+    const titleElement = e.target?.closest && e.target.closest('h3[data-wallpaper-id]');
     
     if (viewBtn || (imageContainer && !e.target.closest('.download-btn')) || titleElement) {
       e.preventDefault();
@@ -115,116 +121,145 @@ const { wallpaper } = Astro.props;
     }
   });
 
-  // Handle download button clicks
-  document.addEventListener('click', async (e) => {
-    const button = (e.target as Element)?.closest('.download-btn') as HTMLButtonElement;
-    if (!button) return;
-    
-    e.preventDefault();
-    e.stopPropagation();
-    
-    const url = button.getAttribute('data-url');
-    const title = button.getAttribute('data-title');
-    const id = button.getAttribute('data-id');
-    
-    if (!url || !title || !id) {
-      console.error('Missing download data');
-      return;
-    }
-    
-    // Disable button and show loading state
-    button.disabled = true;
-    const downloadText = button.querySelector('.download-text');
-    const downloadIcon = button.querySelector('.download-icon');
-    
-    if (downloadText) downloadText.textContent = 'Descargando...';
-    if (downloadIcon) {
-      downloadIcon.innerHTML = `
-        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-      `;
-      downloadIcon.classList.add('animate-spin');
-    }
-    
-    try {
-      // Update download count first
-      const response = await fetch('/api/wallpapers/download', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id })
-      });
+  // Handle download button clicks (solo se agrega una vez)
+  if (!window.__downloadListenerAdded) {
+    document.addEventListener('click', async (e) => {
+      const button = e.target?.closest && e.target.closest('.download-btn');
+      if (!button) return;
       
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to track download');
+      e.preventDefault();
+      e.stopPropagation();
+      
+      const url = button.getAttribute('data-url');
+      const title = button.getAttribute('data-title');
+      const id = button.getAttribute('data-id');
+      
+      if (!url || !title || !id) {
+        console.error('Missing download data');
+        return;
       }
       
-      // Create a temporary link to trigger download
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = `${title.replace(/[^a-z0-9]/gi, '_').toLowerCase()}.jpg`;
-      link.target = '_blank';
-      link.rel = 'noopener noreferrer';
+      // Disable button and show loading state
+      button.disabled = true;
+      const downloadText = button.querySelector('.download-text');
+      const downloadIcon = button.querySelector('.download-icon');
       
-      // Add to DOM, click, and remove
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      
-      // Update UI counter
-      const counter = button.closest('.wallpaper-card')?.querySelector('.download-counter');
-      if (counter) {
-        const countText = counter.textContent?.trim() || '0';
-        const current = parseInt(countText);
-        if (!isNaN(current)) {
-          counter.textContent = (current + 1).toString();
-        }
+      if (downloadText) downloadText.textContent = 'Descargando...';
+      if (downloadIcon) {
+        downloadIcon.innerHTML = `
+          <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+          <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+        `;
+        downloadIcon.classList.add('animate-spin');
       }
       
-      // Show success feedback
-      if (downloadText) downloadText.textContent = '¡Descargado!';
-      
-      // Reset button after 2 seconds
-      setTimeout(() => {
-        if (downloadText) downloadText.textContent = 'Descargar';
-        if (downloadIcon) {
-          downloadIcon.innerHTML = `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3"/>`;
-          downloadIcon.classList.remove('animate-spin');
-        }
-        button.disabled = false;
-      }, 2000);
-      
-    } catch (error) {
-      console.error('Error downloading wallpaper:', error);
-      
-      // Show error feedback
-      if (downloadText) downloadText.textContent = 'Error al descargar';
-      
-      // Reset button after 3 seconds
-      setTimeout(() => {
-        if (downloadText) downloadText.textContent = 'Descargar';
-        if (downloadIcon) {
-          downloadIcon.innerHTML = `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3"/>`;
-          downloadIcon.classList.remove('animate-spin');
-        }
-        button.disabled = false;
-      }, 3000);
-      
-      // Try direct download as fallback
       try {
-        const link = document.createElement('a');
-        link.href = url;
-        link.download = `${title.replace(/[^a-z0-9]/gi, '_').toLowerCase()}.jpg`;
-        link.target = '_blank';
-        link.rel = 'noopener noreferrer';
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-      } catch (fallbackError) {
-        console.error('Fallback download also failed:', fallbackError);
+        // Update download count and get the image directly
+        const response = await fetch('/api/wallpapers/download', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ id })
+        });
+        
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.error || 'Failed to track download');
+        }
+        
+        // Check if response is JSON (fallback) or binary (direct download)
+        const contentType = response.headers.get('content-type');
+        
+        if (contentType && contentType.includes('application/json')) {
+          // Fallback: JSON response with URL
+          const result = await response.json();
+          
+          // Create a temporary link to trigger download using the URL from the server
+          const link = document.createElement('a');
+          link.href = result.downloadUrl;
+          link.download = `${result.title.replace(/[^a-z0-9]/gi, '_').toLowerCase()}.jpg`;
+          link.target = '_blank';
+          link.rel = 'noopener noreferrer';
+          
+          // Add to DOM, click, and remove
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+        } else {
+          // Direct binary download
+          const blob = await response.blob();
+          const url = window.URL.createObjectURL(blob);
+          
+          const link = document.createElement('a');
+          link.href = url;
+          link.download = `${title.replace(/[^a-z0-9]/gi, '_').toLowerCase()}.jpg`;
+          link.target = '_blank';
+          link.rel = 'noopener noreferrer';
+          
+          // Add to DOM, click, and remove
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+          
+          // Clean up the blob URL
+          window.URL.revokeObjectURL(url);
+        }
+        
+        // Update UI counter
+        const counter = button.closest('.wallpaper-card')?.querySelector('.download-counter');
+        if (counter) {
+          const countText = counter.textContent?.trim() || '0';
+          const current = parseInt(countText);
+          if (!isNaN(current)) {
+            counter.textContent = (current + 1).toString();
+          }
+        }
+        
+        // Show success feedback
+        if (downloadText) downloadText.textContent = '¡Descargado!';
+        
+        // Reset button after 2 seconds
+        setTimeout(() => {
+          if (downloadText) downloadText.textContent = 'Descargar';
+          if (downloadIcon) {
+            downloadIcon.innerHTML = `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3"/>`;
+            downloadIcon.classList.remove('animate-spin');
+          }
+          button.disabled = false;
+        }, 2000);
+        
+      } catch (error) {
+        console.error('Error downloading wallpaper:', error);
+        
+        // Show error feedback
+        if (downloadText) downloadText.textContent = 'Error al descargar';
+        
+        // Reset button after 3 seconds
+        setTimeout(() => {
+          if (downloadText) downloadText.textContent = 'Descargar';
+          if (downloadIcon) {
+            downloadIcon.innerHTML = `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3"/>`;
+            downloadIcon.classList.remove('animate-spin');
+          }
+          button.disabled = false;
+        }, 3000);
+        
+        // Try direct download as fallback
+        try {
+          const link = document.createElement('a');
+          link.href = url;
+          link.download = `${title.replace(/[^a-z0-9]/gi, '_').toLowerCase()}.jpg`;
+          link.target = '_blank';
+          link.rel = 'noopener noreferrer';
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+        } catch (fallbackError) {
+          console.error('Fallback download also failed:', fallbackError);
+        }
       }
-    }
-  });
+    });
+    window.__downloadListenerAdded = true;
+  }
 </script>
 
 <style>

@@ -1,5 +1,6 @@
 import type { APIRoute } from 'astro';
 import { supabaseAdmin } from '../../../lib/supabase';
+import sharp from 'sharp';
 
 export const POST: APIRoute = async ({ request }) => {
   try {
@@ -18,8 +19,9 @@ export const POST: APIRoute = async ({ request }) => {
     }
 
     // Validate file type
-    if (!file.type.startsWith('image/')) {
-      return new Response(JSON.stringify({ error: 'File must be an image' }), {
+    const allowedTypes = ['image/png', 'image/webp', 'image/jpeg', 'image/jpg'];
+    if (!allowedTypes.includes(file.type)) {
+      return new Response(JSON.stringify({ error: `Upload failed: mime type ${file.type} is not supported` }), {
         status: 400,
         headers: { 'Content-Type': 'application/json' }
       });
@@ -35,6 +37,7 @@ export const POST: APIRoute = async ({ request }) => {
 
     // Get image dimensions
     const buffer = await file.arrayBuffer();
+    const originalBuffer = Buffer.from(buffer);
     const dimensions = await getImageDimensions(buffer);
 
     // Generate unique filename
@@ -58,7 +61,7 @@ export const POST: APIRoute = async ({ request }) => {
       // Try to create the bucket
       const { error: createBucketError } = await supabaseAdmin.storage.createBucket('wallpapers', {
         public: true,
-        allowedMimeTypes: ['image/jpeg', 'image/png', 'image/webp'],
+        allowedMimeTypes: ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'],
         fileSizeLimit: 10485760 // 10MB
       });
 
@@ -73,10 +76,14 @@ export const POST: APIRoute = async ({ request }) => {
       }
     }
 
+    // Convert to WebP
+    const webpBuffer = await sharp(originalBuffer).webp({ quality: 80 }).toBuffer();
+    const webpFileName = fileName.replace(/\.[a-zA-Z]+$/, '.webp');
+
     // Upload original image
     const { data: uploadData, error: uploadError } = await supabaseAdmin.storage
       .from('wallpapers')
-      .upload(fileName, buffer, {
+      .upload(fileName, originalBuffer, {
         contentType: file.type,
         cacheControl: '3600',
         upsert: false
@@ -92,12 +99,34 @@ export const POST: APIRoute = async ({ request }) => {
       });
     }
 
-    // Get public URL
-    const { data: urlData } = supabaseAdmin.storage
+    // Upload WebP image
+    const { data: webpData, error: webpError } = await supabaseAdmin.storage
       .from('wallpapers')
-      .getPublicUrl(fileName);
+      .upload(webpFileName, webpBuffer, {
+        contentType: 'image/webp',
+        cacheControl: '3600',
+        upsert: false
+      });
 
-    if (!urlData.publicUrl) {
+    if (webpError) {
+      // Clean up original if webp fails
+      await supabaseAdmin.storage.from('wallpapers').remove([fileName]);
+      console.error('WebP upload error:', webpError);
+      return new Response(JSON.stringify({ 
+        error: `WebP upload failed: ${webpError.message}` 
+      }), {
+        status: 500,
+        headers: { 'Content-Type': 'application/json' }
+      });
+    }
+
+    // Get public URLs
+    const { data: urlData } = supabaseAdmin.storage.from('wallpapers').getPublicUrl(fileName);
+    const { data: webpUrlData } = supabaseAdmin.storage.from('wallpapers').getPublicUrl(webpFileName);
+
+    if (!urlData.publicUrl || !webpUrlData.publicUrl) {
+      // Clean up both if any fails
+      await supabaseAdmin.storage.from('wallpapers').remove([fileName, webpFileName]);
       return new Response(JSON.stringify({ error: 'Failed to get public URL' }), {
         status: 500,
         headers: { 'Content-Type': 'application/json' }
@@ -105,7 +134,8 @@ export const POST: APIRoute = async ({ request }) => {
     }
 
     const imageUrl = urlData.publicUrl;
-    const thumbnailUrl = imageUrl; // In production, create a resized version
+    const webpUrl = webpUrlData.publicUrl;
+    const thumbnailUrl = webpUrl; // Puedes usar la webp como thumbnail optimizado
 
     // Parse tags
     const tags = tagsString ? tagsString.split(',').map(tag => tag.trim()).filter(tag => tag.length > 0) : [];
@@ -117,6 +147,7 @@ export const POST: APIRoute = async ({ request }) => {
         title: title.trim(),
         description: description?.trim() || '',
         image_url: imageUrl,
+        webp_url: webpUrl,
         thumbnail_url: thumbnailUrl,
         category_id: categoryId || null,
         tags,
@@ -129,9 +160,8 @@ export const POST: APIRoute = async ({ request }) => {
 
     if (insertError) {
       console.error('Database insert error:', insertError);
-      // Clean up uploaded file if database insert fails
-      await supabaseAdmin.storage.from('wallpapers').remove([fileName]);
-      
+      // Clean up uploaded files if database insert fails
+      await supabaseAdmin.storage.from('wallpapers').remove([fileName, webpFileName]);
       return new Response(JSON.stringify({ 
         error: `Database error: ${insertError.message}` 
       }), {
@@ -157,25 +187,20 @@ export const POST: APIRoute = async ({ request }) => {
 };
 
 async function getImageDimensions(buffer: ArrayBuffer): Promise<{ width: number; height: number }> {
-  // This is a simplified version - in production you'd use a proper image processing library
-  // For now, return default dimensions based on common wallpaper sizes
-  const uint8Array = new Uint8Array(buffer);
-  
-  // Try to detect if it's a JPEG and extract dimensions
-  if (uint8Array[0] === 0xFF && uint8Array[1] === 0xD8) {
-    // JPEG file - try to extract dimensions from EXIF
-    // This is a very basic implementation
-    for (let i = 2; i < uint8Array.length - 4; i++) {
-      if (uint8Array[i] === 0xFF && uint8Array[i + 1] === 0xC0) {
-        const height = (uint8Array[i + 5] << 8) | uint8Array[i + 6];
-        const width = (uint8Array[i + 7] << 8) | uint8Array[i + 8];
-        if (width > 0 && height > 0) {
-          return { width, height };
-        }
-      }
+  try {
+    const imageBuffer = Buffer.from(buffer);
+    const metadata = await sharp(imageBuffer).metadata();
+    
+    if (metadata.width && metadata.height) {
+      return { width: metadata.width, height: metadata.height };
     }
+    
+    // Fallback si sharp no puede obtener las dimensiones
+    console.warn('Could not get image dimensions with sharp, using fallback');
+    return { width: 1920, height: 1080 };
+  } catch (error) {
+    console.error('Error getting image dimensions:', error);
+    // Fallback en caso de error
+    return { width: 1920, height: 1080 };
   }
-  
-  // Default fallback dimensions
-  return { width: 1920, height: 1080 };
 }

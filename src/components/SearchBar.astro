@@ -1,46 +1,121 @@
 ---
 interface Props {
   searchQuery?: string;
+  suggestions?: string[];
 }
 
-const { searchQuery = '' } = Astro.props;
+const { searchQuery = '', suggestions = [] } = Astro.props;
 ---
 
-<div class="search-bar mb-8">
-  <div class="relative max-w-md mx-auto">
+<div class="search-bar mb-6">
+  <div class="relative max-w-xs mx-auto">
     <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-      <svg class="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <svg class="h-5 w-5 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
       </svg>
     </div>
     <input 
       type="text" 
-      class="block w-full pl-10 pr-4 py-3 border border-gray-300 rounded-xl leading-5 bg-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all duration-200"
+      class="block w-full pl-10 pr-4 py-2 rounded-lg leading-5 bg-white/70 border border-purple-400 placeholder-purple-400 text-purple-800 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-200 backdrop-blur-md shadow-md"
       placeholder="Buscar wallpapers..."
       value={searchQuery}
       id="search-input"
+      autocomplete="off"
     />
+    <ul id="suggestions-list" class="absolute left-0 right-0 mt-1 bg-white/90 border border-purple-200 rounded-lg shadow-lg z-20 max-h-48 overflow-y-auto hidden"></ul>
+    <script id="suggestions-json" type="application/json">{JSON.stringify(suggestions)}</script>
   </div>
 </div>
 
-<script>
-  const searchInput = document.getElementById('search-input') as HTMLInputElement;
-  let searchTimeout: NodeJS.Timeout;
-  
-  searchInput?.addEventListener('input', (e) => {
-    clearTimeout(searchTimeout);
-    
-    searchTimeout = setTimeout(() => {
-      const query = (e.target as HTMLInputElement).value.trim();
+<script type="module">
+  document.addEventListener('DOMContentLoaded', () => {
+    const input = document.getElementById('search-input');
+    const suggestionsList = document.getElementById('suggestions-list');
+    const suggestionsJson = document.getElementById('suggestions-json');
+    const allSuggestions = suggestionsJson ? JSON.parse(suggestionsJson.textContent) : [];
+
+    let filtered = [];
+    let selectedIndex = -1;
+
+    input.addEventListener('input', (e) => {
+      const value = e.target.value.toLowerCase();
+      filtered = allSuggestions.filter(title => title.toLowerCase().includes(value));
+      renderSuggestions();
+    });
+
+    input.addEventListener('keydown', (e) => {
+      if (e.key === 'ArrowDown') {
+        if (!suggestionsList.classList.contains('hidden')) {
+          selectedIndex = Math.min(selectedIndex + 1, filtered.length - 1);
+          updateActive();
+          e.preventDefault();
+        }
+      } else if (e.key === 'ArrowUp') {
+        if (!suggestionsList.classList.contains('hidden')) {
+          selectedIndex = Math.max(selectedIndex - 1, 0);
+          updateActive();
+          e.preventDefault();
+        }
+      } else if (e.key === 'Enter') {
+        if (!suggestionsList.classList.contains('hidden') && selectedIndex >= 0 && filtered[selectedIndex]) {
+          selectSuggestion(filtered[selectedIndex]);
+          suggestionsList.classList.add('hidden');
+          e.preventDefault();
+        } else {
+          doSearch(input.value);
+          suggestionsList.classList.add('hidden');
+          e.preventDefault();
+        }
+      } else if (e.key === 'Escape') {
+        suggestionsList.classList.add('hidden');
+      }
+    });
+
+    function renderSuggestions() {
+      suggestionsList.innerHTML = '';
+      selectedIndex = -1;
+      if (input.value.trim() === '' || filtered.length === 0) {
+        suggestionsList.classList.add('hidden');
+        return;
+      }
+      filtered.forEach((title, idx) => {
+        const li = document.createElement('li');
+        li.textContent = title;
+        li.className = 'px-4 py-2 cursor-pointer hover:bg-purple-100 text-purple-800';
+        li.onclick = () => selectSuggestion(title);
+        if (idx === selectedIndex) li.classList.add('bg-purple-200');
+        suggestionsList.appendChild(li);
+      });
+      suggestionsList.classList.remove('hidden');
+    }
+
+    function updateActive() {
+      Array.from(suggestionsList.children).forEach((li, idx) => {
+        li.classList.toggle('bg-purple-200', idx === selectedIndex);
+      });
+    }
+
+    function selectSuggestion(title) {
+      input.value = title;
+      doSearch(title);
+      suggestionsList.classList.add('hidden');
+    }
+
+    function doSearch(query) {
       const url = new URL(window.location.href);
-      
       if (query) {
         url.searchParams.set('search', query);
       } else {
         url.searchParams.delete('search');
       }
-      
       window.location.href = url.toString();
-    }, 500);
+    }
+
+    // Cerrar sugerencias al hacer click fuera
+    document.addEventListener('click', (e) => {
+      if (!input.contains(e.target) && !suggestionsList.contains(e.target)) {
+        suggestionsList.classList.add('hidden');
+      }
+    });
   });
 </script>

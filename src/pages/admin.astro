@@ -4,6 +4,13 @@ import Header from '../components/Header.astro';
 import UploadForm from '../components/UploadForm';
 import { supabase } from '../lib/supabase';
 
+interface Category {
+  id: string;
+  name: string;
+  slug: string;
+  color: string;
+}
+
 // Fetch categories for the upload form
 const { data: categories = [] } = await supabase
   .from('categories')
@@ -19,16 +26,16 @@ const { data: recentWallpapers = [] } = await supabase
     thumbnail_url,
     download_count,
     created_at,
-    categories:category_id (name, color)
+    category:category_id (name, color)
   `)
   .order('created_at', { ascending: false })
   .limit(10);
 
-const transformedWallpapers = recentWallpapers.map(w => ({
+const transformedWallpapers = (recentWallpapers || []).map(w => ({
   ...w,
-  category: w.categories ? {
-    name: w.categories.name,
-    color: w.categories.color
+  category: (w as any).category ? {
+    name: (w as any).category.name,
+    color: (w as any).category.color
   } : null
 }));
 ---
@@ -46,7 +53,7 @@ const transformedWallpapers = recentWallpapers.map(w => ({
       <div class="grid lg:grid-cols-2 gap-8">
         <!-- Upload Form -->
         <div>
-          <UploadForm categories={categories} client:load />
+          <UploadForm categories={categories as Category[]} client:only="react" />
         </div>
         
         <!-- Recent Wallpapers -->
@@ -91,6 +98,18 @@ const transformedWallpapers = recentWallpapers.map(w => ({
                   <div class="text-sm text-gray-400">
                     {new Date(wallpaper.created_at).toLocaleDateString('es-ES')}
                   </div>
+                  <div class="flex flex-col gap-2 ml-4">
+                    <button class="p-2 rounded hover:bg-red-100 transition" title="Eliminar" onclick={`openDeleteModal('${wallpaper.id}')`}>
+                      <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+                      </svg>
+                    </button>
+                    <button class="p-2 rounded hover:bg-yellow-100 transition" title="Editar" onclick={`editWallpaper('${wallpaper.id}')`}>
+                      <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-yellow-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M15.232 5.232l3.536 3.536M9 13l6.586-6.586a2 2 0 112.828 2.828L11.828 15.828a2 2 0 01-2.828 0L9 13z" />
+                      </svg>
+                    </button>
+                  </div>
                 </div>
               ))}
             </div>
@@ -112,3 +131,183 @@ const transformedWallpapers = recentWallpapers.map(w => ({
     </div>
   </div>
 </Layout>
+
+<!-- Modal de confirmación de eliminación -->
+<div id="delete-modal" class="fixed inset-0 z-50 flex items-center justify-center bg-black/40 hidden">
+  <div class="bg-white rounded-xl shadow-lg p-6 w-full max-w-sm text-center">
+    <h3 class="text-xl font-bold mb-4">¿Eliminar wallpaper?</h3>
+    <p class="mb-6 text-gray-700">Esta acción no se puede deshacer.</p>
+    <div class="flex gap-2 justify-center">
+      <button type="button" id="delete-cancel" class="px-4 py-2 rounded bg-gray-200 hover:bg-gray-300">Cancelar</button>
+      <button type="button" id="delete-confirm" class="px-4 py-2 rounded bg-red-600 text-white hover:bg-red-700">Eliminar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal de edición -->
+<div id="edit-modal" class="fixed inset-0 z-50 flex items-center justify-center bg-black/40 hidden">
+  <div class="bg-white rounded-xl shadow-lg p-6 w-full max-w-md">
+    <h3 class="text-xl font-bold mb-4">Editar Wallpaper</h3>
+    <form id="edit-form">
+      <input type="hidden" id="edit-id" />
+      <div class="mb-4">
+        <label class="block text-sm font-medium text-gray-700 mb-1">Título</label>
+        <input id="edit-title" type="text" class="w-full px-3 py-2 border rounded" required />
+      </div>
+      <div class="mb-4">
+        <label class="block text-sm font-medium text-gray-700 mb-1">Categoría</label>
+        <select id="edit-category" class="w-full px-3 py-2 border rounded">
+          <option value="">Sin categoría</option>
+          {(categories || []).map(cat => (
+            <option value={cat.id}>{cat.name}</option>
+          ))}
+        </select>
+      </div>
+      <div class="mb-4">
+        <label class="block text-sm font-medium text-gray-700 mb-1">Imagen (opcional)</label>
+        <input id="edit-image" type="file" accept="image/*" class="block w-full" />
+        <img id="edit-preview" src="" alt="Preview" class="mt-2 rounded max-h-32 hidden" />
+      </div>
+      <div class="flex gap-2 justify-end">
+        <button type="button" id="edit-cancel" class="px-4 py-2 rounded bg-gray-200 hover:bg-gray-300">Cancelar</button>
+        <button type="submit" class="px-4 py-2 rounded bg-primary-600 text-white hover:bg-primary-700">Guardar</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+  let deleteId: string | null = null;
+  (window as any).openDeleteModal = function(id: string) {
+    deleteId = id;
+    const modal = document.getElementById('delete-modal');
+    if (modal) modal.classList.remove('hidden');
+  };
+  const deleteCancel = document.getElementById('delete-cancel');
+  if (deleteCancel) deleteCancel.onclick = () => {
+    const modal = document.getElementById('delete-modal');
+    if (modal) modal.classList.add('hidden');
+    deleteId = null;
+  };
+  const deleteConfirm = document.getElementById('delete-confirm');
+  if (deleteConfirm) deleteConfirm.onclick = () => {
+    if (!deleteId) return;
+    fetch(`/api/wallpapers/delete?id=${deleteId}`, { method: 'DELETE' })
+      .then(res => res.json())
+      .then(data => {
+        if (data.success) {
+          alert('Wallpaper eliminado');
+          window.location.reload();
+        } else {
+          alert('Error al eliminar: ' + (data.error || 'Desconocido'));
+        }
+      })
+      .catch(() => alert('Error al eliminar.'));
+    const modal = document.getElementById('delete-modal');
+    if (modal) modal.classList.add('hidden');
+    deleteId = null;
+  };
+
+  (window as any).editWallpaper = function(id: string) {
+    const card = document.querySelector(`[onclick*="editWallpaper('${id}')"]`);
+    const cardFlex = card && card.closest('.flex.items-center');
+    if (!cardFlex) return;
+    const titleEl = cardFlex.querySelector('h3');
+    const title = titleEl && titleEl.textContent ? titleEl.textContent.trim() : '';
+    const selectEl = cardFlex.querySelector('select') as HTMLSelectElement | null;
+    const categoryId = selectEl ? selectEl.value : '';
+    const editId = document.getElementById('edit-id') as HTMLInputElement | null;
+    const editTitle = document.getElementById('edit-title') as HTMLInputElement | null;
+    if (editId) editId.value = id;
+    if (editTitle) editTitle.value = title;
+    // Selecciona la categoría actual si existe
+    const select = document.getElementById('edit-category') as HTMLSelectElement | null;
+    if (select) {
+      const currentCat = cardFlex.querySelector('span[style*="background-color"]');
+      if (currentCat) {
+        const catName = currentCat.textContent ? currentCat.textContent.trim() : '';
+        for (let i = 0; i < select.options.length; i++) {
+          const opt = select.options[i];
+          if (opt.textContent === catName) {
+            opt.selected = true;
+          }
+        }
+      } else {
+        select.selectedIndex = 0;
+      }
+    }
+    // Imagen actual (si existe)
+    const img = cardFlex.querySelector('img') as HTMLImageElement | null;
+    const preview = document.getElementById('edit-preview') as HTMLImageElement | null;
+    if (img && preview) {
+      preview.src = img.src;
+      preview.classList.remove('hidden');
+    } else if (preview) {
+      preview.src = '';
+      preview.classList.add('hidden');
+    }
+    const editImage = document.getElementById('edit-image') as HTMLInputElement | null;
+    if (editImage) editImage.value = '';
+    const modal = document.getElementById('edit-modal');
+    if (modal) modal.classList.remove('hidden');
+  };
+
+  const editCancel = document.getElementById('edit-cancel');
+  if (editCancel) editCancel.onclick = () => {
+    const modal = document.getElementById('edit-modal');
+    if (modal) modal.classList.add('hidden');
+  };
+
+  const editImage = document.getElementById('edit-image') as HTMLInputElement | null;
+  if (editImage) editImage.onchange = function(e) {
+    const file = (e.target as HTMLInputElement)?.files?.[0] || null;
+    const preview = document.getElementById('edit-preview') as HTMLImageElement | null;
+    if (file && preview) {
+      const reader = new FileReader();
+      reader.onload = ev => {
+        if (ev.target && preview) {
+          preview.src = (ev.target as FileReader).result as string;
+          preview.classList.remove('hidden');
+        }
+      };
+      reader.readAsDataURL(file);
+    } else if (preview) {
+      preview.src = '';
+      preview.classList.add('hidden');
+    }
+  };
+
+  const editForm = document.getElementById('edit-form');
+  if (editForm) editForm.onsubmit = function(e) {
+    e.preventDefault();
+    const editId = document.getElementById('edit-id') as HTMLInputElement | null;
+    const editTitle = document.getElementById('edit-title') as HTMLInputElement | null;
+    const editCategory = document.getElementById('edit-category') as HTMLSelectElement | null;
+    const imageInput = document.getElementById('edit-image') as HTMLInputElement | null;
+    const id = editId ? editId.value : '';
+    const title = editTitle ? editTitle.value : '';
+    const categoryId = editCategory ? editCategory.value : '';
+    const file = imageInput?.files?.[0] || null;
+    const formData = new FormData();
+    formData.append('id', id);
+    formData.append('title', title);
+    formData.append('categoryId', categoryId);
+    if (file) formData.append('file', file);
+    fetch('/api/wallpapers/edit', {
+      method: 'POST',
+      body: formData
+    })
+      .then(res => res.json())
+      .then(data => {
+        if (data.success) {
+          alert('Wallpaper actualizado');
+          window.location.reload();
+        } else {
+          alert('Error al actualizar: ' + (data.error || 'Desconocido'));
+        }
+      })
+      .catch(() => alert('Error al actualizar.'));
+  };
+});
+</script>

@@ -9,39 +9,32 @@ interface Category {
 interface Props {
   categories: Category[];
   selectedCategory?: string;
+  selectedSize?: string;
 }
 
-const { categories, selectedCategory } = Astro.props;
+const { categories, selectedCategory, selectedSize } = Astro.props;
+
+const sizeOptions = [
+  { value: '', label: 'Todos los tamaños' },
+  { value: 'small', label: 'Pequeño (≤1280x720)' },
+  { value: 'medium', label: 'Mediano (≤1920x1080)' },
+  { value: 'large', label: 'Grande (≤2560x1440)' },
+  { value: 'uhd', label: 'Ultra HD (≥3840x2160)' },
+];
 ---
 
 <div class="category-filter mb-8">
-  <div class="flex flex-wrap gap-3">
-    <button 
-      class={`filter-btn px-6 py-2 rounded-full font-medium transition-all duration-300 transform hover:scale-105 ${
-        !selectedCategory 
-          ? 'bg-primary-500 text-white shadow-md scale-105' 
-          : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-      }`}
-      data-category=""
-    >
-      Todos
-    </button>
-    
-    {categories.map(category => (
-      <button 
-        class={`filter-btn px-6 py-2 rounded-full font-medium transition-all duration-300 transform hover:scale-105 ${
-          selectedCategory === category.slug
-            ? 'text-white shadow-md scale-105'
-            : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-        }`}
-        style={selectedCategory === category.slug ? `background-color: ${category.color}` : ''}
-        data-category={category.slug}
-      >
-        {category.name}
-      </button>
-    ))}
+  <div class="flex items-center gap-3">
+    <label for="size-select" class="font-medium text-gray-100">Filtrar por tamaño:</label>
+    <select id="size-select" class="px-4 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition" autocomplete="off">
+      {sizeOptions.map(opt => (
+        <option value={opt.value} selected={selectedSize === opt.value}>{opt.label}</option>
+      ))}
+    </select>
   </div>
 </div>
+
+
 
 <!-- Loading overlay for smooth transitions -->
 <div id="loading-overlay" class="fixed inset-0 bg-white/80 backdrop-blur-sm z-40 opacity-0 pointer-events-none transition-opacity duration-300">
@@ -79,7 +72,7 @@ const { categories, selectedCategory } = Astro.props;
     }
     
     // Add fade out effect to current content
-    const wallpaperGrid = document.querySelector('.wallpaper-grid');
+    const wallpaperGrid = document.querySelector('.wallpaper-grid') as HTMLElement | null;
     if (wallpaperGrid) {
       wallpaperGrid.style.opacity = '0.5';
       wallpaperGrid.style.transform = 'translateY(10px)';
@@ -99,11 +92,26 @@ const { categories, selectedCategory } = Astro.props;
 
   // Handle page load - fade in content
   document.addEventListener('DOMContentLoaded', () => {
-    const wallpaperGrid = document.querySelector('.wallpaper-grid');
+    const wallpaperGrid = document.querySelector('.wallpaper-grid') as HTMLElement | null;
     if (wallpaperGrid) {
       wallpaperGrid.style.opacity = '1';
       wallpaperGrid.style.transform = 'translateY(0)';
     }
+  });
+
+  document.addEventListener('DOMContentLoaded', () => {
+    const select = document.getElementById('size-select');
+    if (!select) return;
+    select.addEventListener('change', (e) => {
+      const value = (e.target as HTMLSelectElement).value;
+      const url = new URL(window.location.href);
+      if (value) {
+        url.searchParams.set('size', value);
+      } else {
+        url.searchParams.delete('size');
+      }
+      window.location.href = url.toString();
+    });
   });
 </script>
 

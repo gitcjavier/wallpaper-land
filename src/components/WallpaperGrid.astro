@@ -58,8 +58,8 @@ const { wallpapers } = Astro.props;
     const grid = document.querySelector('.wallpaper-grid');
     if (grid) {
       setTimeout(() => {
-        grid.style.opacity = '1';
-        grid.style.transform = 'translateY(0)';
+        (grid as HTMLElement).style.opacity = '1';
+        (grid as HTMLElement).style.transform = 'translateY(0)';
       }, 100);
     }
   });

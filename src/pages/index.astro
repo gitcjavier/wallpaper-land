@@ -1,15 +1,19 @@
 ---
+// Supports weights 100-900
+import '@fontsource-variable/inter';
 import Layout from '../layouts/Layout.astro';
 import Header from '../components/Header.astro';
-import SearchBar from '../components/SearchBar.astro';
+import SearchBar from '../components/SearchBar.tsx';
 import CategoryFilter from '../components/CategoryFilter.astro';
 import WallpaperGrid from '../components/WallpaperGrid.astro';
 import WallpaperModal from '../components/WallpaperModal';
 import { supabase } from '../lib/supabase';
 
+const currentYear = new Date().getFullYear()
 // Get query parameters
 const categorySlug = Astro.url.searchParams.get('category');
 const searchQuery = Astro.url.searchParams.get('search');
+const size = Astro.url.searchParams.get('size');
 
 // Fetch categories
 const { data: categories = [] } = await supabase
@@ -41,7 +45,7 @@ let wallpapersQuery = supabase
 
 // Apply category filter
 if (categorySlug) {
-  const category = categories.find(c => c.slug === categorySlug);
+  const category = (categories || []).find(c => c.slug === categorySlug);
   if (category) {
     wallpapersQuery = wallpapersQuery.eq('category_id', category.id);
   }
@@ -52,39 +56,51 @@ if (searchQuery) {
   wallpapersQuery = wallpapersQuery.ilike('title', `%${searchQuery}%`);
 }
 
+// Apply size filter
+if (size) {
+  if (size === 'small') {
+    wallpapersQuery = wallpapersQuery.lte('width', 1280).lte('height', 720);
+  } else if (size === 'medium') {
+    wallpapersQuery = wallpapersQuery.lte('width', 1920).lte('height', 1080);
+  } else if (size === 'large') {
+    wallpapersQuery = wallpapersQuery.lte('width', 2560).lte('height', 1440);
+  } else if (size === 'uhd') {
+    wallpapersQuery = wallpapersQuery.gte('width', 3840).gte('height', 2160);
+  }
+}
+
 const { data: wallpapers = [] } = await wallpapersQuery;
 
 // Transform data for component
-const transformedWallpapers = wallpapers.map(w => ({
+const transformedWallpapers = (wallpapers || []).map(w => ({
   ...w,
-  category: w.categories ? {
-    name: w.categories.name,
-    color: w.categories.color
+  category: (w as any).categories ? {
+    name: (w as any).categories.name,
+    color: (w as any).categories.color
   } : null
 }));
 
-const totalWallpapers = wallpapers.length;
-const selectedCategoryName = categorySlug ? categories.find(c => c.slug === categorySlug)?.name : null;
+const totalWallpapers = (wallpapers || []).length;
+const selectedCategoryName = categorySlug ? (categories || []).find(c => c.slug === categorySlug)?.name : null;
 ---
 
 <Layout title={selectedCategoryName ? `${selectedCategoryName} - WallpaperHub` : "WallpaperHub - Descarga wallpapers gratis"}>
   <Header />
   
   <!-- Hero Section -->
-  <section class="hero-section bg-gradient-to-br from-primary-50 via-white to-secondary-50 py-16 relative overflow-hidden">
+  <section class="hero-section bg-gradient-to-br from-primary-50 via-white to-secondary-50 py-10 relative overflow-hidden">
     <!-- Animated background elements -->
-    <div class="absolute inset-0 opacity-5">
+    <div class="absolute inset-0 opacity-10">
       <div class="absolute top-10 left-10 w-20 h-20 bg-primary-500 rounded-full animate-pulse"></div>
-      <div class="absolute top-32 right-20 w-16 h-16 bg-secondary-500 rounded-full animate-pulse" style="animation-delay: 1s"></div>
-      <div class="absolute bottom-20 left-1/4 w-12 h-12 bg-accent-500 rounded-full animate-pulse" style="animation-delay: 2s"></div>
+      <div class="absolute top-10 right-20 w-16 h-16 bg-secondary-500 rounded-full animate-pulse" style="animation-delay: 1s"></div>
+      <div class="absolute bottom-2 left-1/4 w-12 h-12 bg-accent-500 rounded-full animate-pulse" style="animation-delay: 2s"></div>
     </div>
-    
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center relative z-10">
-      <h1 class="text-4xl md:text-6xl font-bold text-gray-900 mb-6 animate-slide-up">
+    <div class="max-w-5xl mx-auto px-4  sm:px-6 lg:px-8 text-center relative z-10">
+      <h1 class="text-4xl md:text-6xl font-bold text-gray-900 mb-1 animate-slide-up">
         {selectedCategoryName ? (
-          <>Wallpapers de <span class="bg-gradient-to-r from-primary-600 to-secondary-600 bg-clip-text text-transparent">{selectedCategoryName}</span></>
+          <>Wallpapers de <span class="bg-gradient-to-r from-primary-600 via-red-300 to-secondary-600 bg-clip-text text-transparent">{selectedCategoryName}</span></>
         ) : (
-          <>Descarga <span class="bg-gradient-to-r from-primary-600 to-secondary-600 bg-clip-text text-transparent">wallpapers</span> increíbles</>
+          <>Descarga <span class="bg-gradient-to-r from-primary-600 via-red-300 to-secondary-600 bg-clip-text text-transparent">wallpapers</span> increíbles</>
         )}
       </h1>
       <p class="text-xl text-gray-600 mb-8 max-w-2xl mx-auto animate-slide-up" style="animation-delay: 0.1s">
@@ -94,9 +110,8 @@ const selectedCategoryName = categorySlug ? categories.find(c => c.slug === cate
           `Explora nuestra colección de wallpapers de alta calidad, organizados por categorías y completamente gratis.`
         )}
       </p>
-      
       <div class="animate-slide-up" style="animation-delay: 0.2s">
-        <SearchBar searchQuery={searchQuery} />
+        <SearchBar searchQuery={searchQuery || undefined} suggestions={(wallpapers || []).map(w => w.title)} client:only="react" />
       </div>
     </div>
   </section>
@@ -105,7 +120,7 @@ const selectedCategoryName = categorySlug ? categories.find(c => c.slug === cate
   <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
     <!-- Filters -->
     <div class="animate-slide-up" style="animation-delay: 0.3s">
-      <CategoryFilter categories={categories} selectedCategory={categorySlug} />
+      <CategoryFilter categories={categories || []} selectedCategory={categorySlug || undefined} selectedSize={size || ''} />
     </div>
     
     <!-- Results Info -->
@@ -151,102 +166,27 @@ const selectedCategoryName = categorySlug ? categories.find(c => c.slug === cate
   </main>
 
   <!-- Wallpaper Modal -->
-  <WallpaperModal client:load />
+  <WallpaperModal client:only="react" />
 
   <!-- Footer -->
-  <footer class="bg-gray-900 text-white py-12 mt-16">
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-      <div class="grid md:grid-cols-4 gap-8">
-        <div>
-          <div class="flex items-center space-x-2 mb-4">
-            <div class="w-8 h-8 bg-gradient-to-r from-primary-500 to-secondary-500 rounded-lg flex items-center justify-center">
-              <svg class="w-5 h-5 text-white" fill="currentColor" viewBox="0 0 24 24">
-                <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
-              </svg>
-            </div>
-            <span class="text-xl font-bold">WallpaperHub</span>
-          </div>
-          <p class="text-gray-300">
-            La mejor colección de wallpapers gratuitos para personalizar tus dispositivos.
-          </p>
+  <footer class="fixed bottom-0 left-1/2 transform -translate-x-1/2 z-40 rounded-lg shadow-sm mb-2 bg-black/20 backdrop-blur-lg">
+      <div class="flex items-center justify-center gap-4 p-4">
+        <div class="w-8 h-8 bg-gradient-to-r from-primary-500 to-secondary-500 rounded-lg flex items-center justify-center">
+          <svg class="w-5 h-5 text-white" fill="currentColor" viewBox="0 0 24 24">
+            <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
+          </svg>
         </div>
-        
-        <div>
-          <h3 class="text-lg font-semibold mb-4">Categorías Populares</h3>
-          <ul class="space-y-2 text-gray-300">
-            {categories.slice(0, 6).map(category => (
-              <li>
-                <a href={`/?category=${category.slug}`} class="hover:text-primary-400 transition-colors flex items-center">
-                  <div 
-                    class="w-3 h-3 rounded-full mr-2" 
-                    style={`background-color: ${category.color}`}
-                  ></div>
-                  {category.name}
-                </a>
-              </li>
-            ))}
-          </ul>
-        </div>
-        
-        <div>
-          <h3 class="text-lg font-semibold mb-4">Entretenimiento</h3>
-          <ul class="space-y-2 text-gray-300">
-            {categories.filter(c => ['anime', 'peliculas', 'series-tv', 'deportes'].includes(c.slug)).map(category => (
-              <li>
-                <a href={`/?category=${category.slug}`} class="hover:text-primary-400 transition-colors flex items-center">
-                  <div 
-                    class="w-3 h-3 rounded-full mr-2" 
-                    style={`background-color: ${category.color}`}
-                  ></div>
-                  {category.name}
-                </a>
-              </li>
-            ))}
-          </ul>
-        </div>
-        
-        <div>
-          <h3 class="text-lg font-semibold mb-4">Estadísticas</h3>
-          <ul class="space-y-2 text-gray-300">
-            <li class="flex items-center">
-              <svg class="w-4 h-4 mr-2 text-primary-400" fill="currentColor" viewBox="0 0 24 24">
-                <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
-              </svg>
-              {categories.length} categorías
-            </li>
-            <li class="flex items-center">
-              <svg class="w-4 h-4 mr-2 text-green-400" fill="currentColor" viewBox="0 0 24 24">
-                <path d="M5 13l4 4L19 7"/>
-              </svg>
-              Descarga gratuita
-            </li>
-            <li class="flex items-center">
-              <svg class="w-4 h-4 mr-2 text-blue-400" fill="currentColor" viewBox="0 0 24 24">
-                <path d="M13 10V3L4 14h7v7l9-11h-7z"/>
-              </svg>
-              Alta resolución
-            </li>
-            <li class="flex items-center">
-              <svg class="w-4 h-4 mr-2 text-purple-400" fill="currentColor" viewBox="0 0 24 24">
-                <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
-              </svg>
-              Actualizado diariamente
-            </li>
-          </ul>
-        </div>
+        <span class="text-sm text-white/90">
+          © {currentYear} WallpaperHub <a href="https://github.com/gitcjavier" class="hover:underline">Javoru™</a>. Todos los derechos reservados.
+        </span>
       </div>
-      
-      <div class="border-t border-gray-800 mt-8 pt-8 text-center text-gray-300">
-        <p>&copy; 2025 WallpaperHub. Todos los derechos reservados.</p>
-      </div>
-    </div>
   </footer>
 
   <!-- Modal Script -->
   <script>
     // Global modal state
-    let modalComponent = null;
-    let currentWallpaper = null;
+    let modalComponent: { forceUpdate: () => void } | null = null;
+    let currentWallpaper: any = null;
     let isModalOpen = false;
 
     // Function to open modal
@@ -286,6 +226,16 @@ const selectedCategoryName = categorySlug ? categories.find(c => c.slug === cate
       wallpaper: currentWallpaper,
       isOpen: isModalOpen
     });
+
+    declare global {
+      interface Window {
+        wallpaperData?: Map<string, any>;
+        openWallpaperModal?: (wallpaperId: string) => void;
+        closeWallpaperModal?: () => void;
+        setModalComponent?: (component: any) => void;
+        getModalState?: () => { wallpaper: any, isOpen: boolean };
+      }
+    }
   </script>
 </Layout>
 
@@ -307,9 +257,11 @@ const selectedCategoryName = categorySlug ? categories.find(c => c.slug === cate
     opacity: 0;
   }
 
-  /* Smooth page transitions */
+  /* Fondo global con gradiente oscuro lila */
   body {
+    @apply min-h-screen bg-gradient-to-br from-[#2d133b] via-[#3a1856] to-[#6d28d9];
     transition: opacity 0.3s ease-in-out;
+    font-family: 'Inter Variable', sans-serif;
   }
 
   /* Loading state styles */
