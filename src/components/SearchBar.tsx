@@ -86,7 +86,7 @@ const SearchBar: React.FC<SearchBarProps> = ({ searchQuery = '', suggestions = [
   }, []);
 
   return (
-    <div className="search-bar mb-6">
+    <div className="search-bar mb-6 ">
       <div className="relative max-w-xs mx-auto">
         <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
           <svg className="h-5 w-5 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -95,7 +95,7 @@ const SearchBar: React.FC<SearchBarProps> = ({ searchQuery = '', suggestions = [
         </div>
         <input
           type="text"
-          className="block w-full pl-10 pr-4 py-2 rounded-lg leading-5 bg-white/70 border border-purple-400 placeholder-purple-400 text-purple-800 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-200 backdrop-blur-md shadow-md"
+          className="block w-full pl-10 pr-4 py-2 rounded-lg leading-5 bg-white/90 border border-purple-400 placeholder-purple-400 text-purple-800 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-200 backdrop-blur-md shadow-md"
           placeholder="Buscar wallpapers..."
           value={inputValue}
           ref={inputRef}

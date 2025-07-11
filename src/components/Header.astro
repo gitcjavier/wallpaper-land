@@ -1,7 +1,7 @@
 ---
 ---
 
-<header class="bg-white/80 backdrop-blur-md shadow-sm sticky top-0 z-50 border-b border-white/20">
+<header class="bg-black/70 backdrop-blur-md shadow-sm sticky top-0 z-50 border-b border-white/20">
   <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
     <div class="flex justify-between items-center py-4">
       <!-- Logo -->
@@ -12,7 +12,7 @@
               <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
             </svg>
           </div>
-          <span class="text-xl font-bold text-gray-900">WallpaperHub</span>
+          <span class="text-xl font-bold text-white">WallpaperHub</span>
         </a>
       </div>
       
@@ -26,7 +26,7 @@
           </div>
           <input 
             type="text" 
-            class="block w-80 pl-10 pr-4 py-2 border border-gray-300 rounded-lg leading-5 bg-white/90 backdrop-blur-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all duration-200 text-sm"
+            class="block w-80 pl-10 pr-4 py-2 border border-gray-300 rounded-lg leading-5 bg-white backdrop-blur-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all duration-200 text-sm"
             placeholder="Buscar wallpapers..."
             id="floating-search-input"
           />
@@ -34,11 +34,11 @@
       </div>
       
       <!-- Navigation -->
-      <nav class="hidden md:flex items-center space-x-8">
-        <a href="/" class="text-gray-700 hover:text-primary-600 font-medium transition-colors duration-200">
+      <nav class="hidden md:flex items-center space-x-8 ">
+        <a href="/" class="text-white hover:text-primary-600 font-medium transition-colors duration-200">
           Inicio
         </a>
-        <a href="/admin" class="text-gray-700 hover:text-primary-600 font-medium transition-colors duration-200">
+        <a href="/admin" class="text-white hover:text-primary-600 font-medium transition-colors duration-200">
           Admin
         </a>
       </nav>
@@ -53,11 +53,11 @@
     
     <!-- Mobile menu -->
     <div class="md:hidden hidden" id="mobile-menu">
-      <div class="py-4 space-y-2 border-t border-gray-200/50">
-        <a href="/" class="block py-2 text-gray-700 hover:text-primary-600 font-medium transition-colors duration-200">
+      <div class="py-4 space-y-2 border-t border-gray-200/50 ">
+        <a href="/" class="block py-2 text-white hover:text-primary-600 font-medium transition-colors duration-200 ">
           Inicio
         </a>
-        <a href="/admin" class="block py-2 text-gray-700 hover:text-primary-600 font-medium transition-colors duration-200">
+        <a href="/admin" class="block py-2 text-white hover:text-primary-600 font-medium transition-colors duration-200  ">
           Admin
         </a>
       </div>
@@ -79,10 +79,10 @@
   const heroSection = document.querySelector('.hero-section');
   const originalSearchInput = document.getElementById('search-input');
   
-  let searchTimeout: NodeJS.Timeout;
+  let searchTimeout: ReturnType<typeof setTimeout> | undefined;
   let isFloatingVisible = false;
 
-  // Intersection Observer to detect when hero section is out of view
+  // Observador de intersección para detectar cuando la sección hero está fuera de vista
   if (heroSection && floatingSearch && floatingSearchInput && originalSearchInput) {
     const observer = new IntersectionObserver((entries) => {
       entries.forEach((entry) => {
@@ -94,7 +94,7 @@
             floatingSearch.style.pointerEvents = 'none';
             isFloatingVisible = false;
           }
-        } else {
+        } else {    
           // Hero section is not visible, show floating search
           if (!isFloatingVisible) {
             floatingSearch.style.opacity = '1';
@@ -103,7 +103,7 @@
             isFloatingVisible = true;
             
             // Sync the search value
-            floatingSearchInput.value = originalSearchInput.value;
+            
           }
         }
       });
@@ -133,9 +133,7 @@
     });
 
     // Sync original search input changes to floating search
-    originalSearchInput.addEventListener('input', (e) => {
-      floatingSearchInput.value = (e.target as HTMLInputElement).value;
-    });
+
   }
 </script>
 
@@ -174,4 +172,3 @@
     }
   }
 </style>
-</header>

@@ -3,7 +3,7 @@
 import '@fontsource-variable/inter';
 import Layout from '../layouts/Layout.astro';
 import Header from '../components/Header.astro';
-import SearchBar from '../components/SearchBar.tsx';
+import SearchBar from '../components/SearchBar';
 import CategoryFilter from '../components/CategoryFilter.astro';
 import WallpaperGrid from '../components/WallpaperGrid.astro';
 import WallpaperModal from '../components/WallpaperModal';
@@ -84,11 +84,12 @@ const totalWallpapers = (wallpapers || []).length;
 const selectedCategoryName = categorySlug ? (categories || []).find(c => c.slug === categorySlug)?.name : null;
 ---
 
-<Layout title={selectedCategoryName ? `${selectedCategoryName} - WallpaperHub` : "WallpaperHub - Descarga wallpapers gratis"}>
+<Layout title={selectedCategoryName ? `${selectedCategoryName} - WallpaperHub` : "WallpaperHub - Descarga wallpapers gratis"} 
+  class="bg-black min-h-screen">
   <Header />
   
   <!-- Hero Section -->
-  <section class="hero-section bg-gradient-to-br from-primary-50 via-white to-secondary-50 py-10 relative overflow-hidden">
+  <section class="hero-section py-10 relative overflow-hidden bg-black">
     <!-- Animated background elements -->
     <div class="absolute inset-0 opacity-10">
       <div class="absolute top-10 left-10 w-20 h-20 bg-primary-500 rounded-full animate-pulse"></div>
@@ -96,14 +97,14 @@ const selectedCategoryName = categorySlug ? (categories || []).find(c => c.slug 
       <div class="absolute bottom-2 left-1/4 w-12 h-12 bg-accent-500 rounded-full animate-pulse" style="animation-delay: 2s"></div>
     </div>
     <div class="max-w-5xl mx-auto px-4  sm:px-6 lg:px-8 text-center relative z-10">
-      <h1 class="text-4xl md:text-6xl font-bold text-gray-900 mb-1 animate-slide-up">
+      <h1 class="text-4xl md:text-6xl font-bold text-white mb-1 animate-slide-up">
         {selectedCategoryName ? (
           <>Wallpapers de <span class="bg-gradient-to-r from-primary-600 via-red-300 to-secondary-600 bg-clip-text text-transparent">{selectedCategoryName}</span></>
         ) : (
           <>Descarga <span class="bg-gradient-to-r from-primary-600 via-red-300 to-secondary-600 bg-clip-text text-transparent">wallpapers</span> increíbles</>
         )}
       </h1>
-      <p class="text-xl text-gray-600 mb-8 max-w-2xl mx-auto animate-slide-up" style="animation-delay: 0.1s">
+      <p class="text-xl text-gray-300 mb-8 max-w-2xl mx-auto animate-slide-up" style="animation-delay: 0.1s">
         {selectedCategoryName ? (
           `Explora ${totalWallpapers} wallpapers de ${selectedCategoryName.toLowerCase()} de alta calidad, completamente gratis.`
         ) : (
@@ -117,27 +118,27 @@ const selectedCategoryName = categorySlug ? (categories || []).find(c => c.slug 
   </section>
 
   <!-- Main Content -->
-  <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+  <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 ">
     <!-- Filters -->
-    <div class="animate-slide-up" style="animation-delay: 0.3s">
+    <div class="animate-slide-up " style="animation-delay: 0.3s">
       <CategoryFilter categories={categories || []} selectedCategory={categorySlug || undefined} selectedSize={size || ''} />
     </div>
     
     <!-- Results Info -->
     {(searchQuery || selectedCategoryName) && (
       <div class="mb-6 animate-slide-up" style="animation-delay: 0.4s">
-        <div class="bg-white rounded-lg p-4 shadow-sm border border-gray-100">
+        <div class="bg-neutral-900 rounded-lg p-4 shadow-sm border border-neutral-700">
           <div class="flex items-center justify-between">
             <div>
               {searchQuery && (
-                <p class="text-gray-600">
+                <p class="text-gray-300">
                   Resultados para "<span class="font-semibold text-primary-600">{searchQuery}</span>"
                   {selectedCategoryName && ` en ${selectedCategoryName}`}: 
                   <span class="font-semibold">{transformedWallpapers.length}</span> wallpapers encontrados
                 </p>
               )}
               {!searchQuery && selectedCategoryName && (
-                <p class="text-gray-600">
+                <p class="text-gray-300">
                   Mostrando <span class="font-semibold">{transformedWallpapers.length}</span> wallpapers de 
                   <span class="font-semibold text-primary-600">{selectedCategoryName}</span>
                 </p>
@@ -146,7 +147,7 @@ const selectedCategoryName = categorySlug ? (categories || []).find(c => c.slug 
             {(searchQuery || selectedCategoryName) && (
               <a 
                 href="/" 
-                class="inline-flex items-center px-3 py-1 text-sm text-primary-600 hover:text-primary-700 hover:bg-primary-50 rounded-lg transition-colors"
+                class="inline-flex items-center px-3 py-1 text-sm text-primary-400 hover:text-primary-300 hover:bg-primary-900/30 rounded-lg transition-colors"
               >
                 <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
@@ -176,18 +177,53 @@ const selectedCategoryName = categorySlug ? (categories || []).find(c => c.slug 
             <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
           </svg>
         </div>
-        <span class="text-sm text-white/90">
-          © {currentYear} WallpaperHub <a href="https://github.com/gitcjavier" class="hover:underline">Javoru™</a>. Todos los derechos reservados.
+        <span class="text-sm text-white">
+          © {currentYear} WallpaperHub --- Hecho con 💘 por <a href="https://github.com/gitcjavier" class="hover:underline">Javoru™</a>.
         </span>
       </div>
   </footer>
 
   <!-- Modal Script -->
   <script>
+    // TypeScript: Extend Window interface for custom modal properties
+    /**
+     * @typedef {Map<string, any>} WallpaperDataMap
+     */
+    // Extend the Window interface for TypeScript
+    // @ts-ignore
+    declare global {
+      interface Window {
+        wallpaperData: Map<string, any>;
+        openWallpaperModal: (wallpaperId: string) => void;
+        closeWallpaperModal: () => void;
+        setModalComponent: (component: any) => void;
+        getModalState: () => { wallpaper: any, isOpen: boolean };
+      }
+    }
+    /**
+     * @type {any}
+     */
+    window;
+
+    /**
+     * @typedef {Object} ModalFunctions
+     * @property {(wallpaperId: string) => void} openWallpaperModal
+     * @property {() => void} closeWallpaperModal
+     * @property {(component: any) => void} setModalComponent
+     * @property {() => { wallpaper: any, isOpen: boolean }} getModalState
+     * @property {Map<string, any>} wallpaperData
+     */
+
+    // @ts-ignore
+    window.wallpaperData = window.wallpaperData || new Map();
+
     // Global modal state
-    let modalComponent: { forceUpdate: () => void } | null = null;
-    let currentWallpaper: any = null;
+    let modalComponent = null;
+    let currentWallpaper = null;
     let isModalOpen = false;
+
+
+    
 
     // Function to open modal
     window.openWallpaperModal = (wallpaperId) => {
@@ -195,6 +231,7 @@ const selectedCategoryName = categorySlug ? (categories || []).find(c => c.slug 
         console.error('Wallpaper data not found for ID:', wallpaperId);
         return;
       }
+      
 
       currentWallpaper = window.wallpaperData.get(wallpaperId);
       isModalOpen = true;
@@ -226,16 +263,6 @@ const selectedCategoryName = categorySlug ? (categories || []).find(c => c.slug 
       wallpaper: currentWallpaper,
       isOpen: isModalOpen
     });
-
-    declare global {
-      interface Window {
-        wallpaperData?: Map<string, any>;
-        openWallpaperModal?: (wallpaperId: string) => void;
-        closeWallpaperModal?: () => void;
-        setModalComponent?: (component: any) => void;
-        getModalState?: () => { wallpaper: any, isOpen: boolean };
-      }
-    }
   </script>
 </Layout>
 
@@ -259,7 +286,8 @@ const selectedCategoryName = categorySlug ? (categories || []).find(c => c.slug 
 
   /* Fondo global con gradiente oscuro lila */
   body {
-    @apply min-h-screen bg-gradient-to-br from-[#2d133b] via-[#3a1856] to-[#6d28d9];
+    background-color: black;
+    @apply min-h-screen bg-black;
     transition: opacity 0.3s ease-in-out;
     font-family: 'Inter Variable', sans-serif;
   }
